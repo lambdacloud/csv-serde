@@ -1,15 +1,7 @@
 package com.bizo.hive.serde.csv;
 
-import java.io.CharArrayReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
-
+import au.com.bytecode.opencsv.CSVReader;
+import au.com.bytecode.opencsv.CSVWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.serde.Constants;
 import org.apache.hadoop.hive.serde2.SerDe;
@@ -19,16 +11,18 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
-import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.StringObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
-import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
-import au.com.bytecode.opencsv.CSVReader;
-import au.com.bytecode.opencsv.CSVWriter;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * CSVSerde uses opencsv (http://opencsv.sourceforge.net/) to serialize/deserialize columns as CSV.
@@ -132,69 +126,73 @@ public final class CSVSerde implements SerDe {
       for (int i=0; i< numCols; i++) {
         if (columnTypes.get(i).getCategory() == ObjectInspector.Category.PRIMITIVE) {
           PrimitiveTypeInfo columnType = (PrimitiveTypeInfo) columnTypes.get(i);
-          if (read != null && i < read.length) {
-            String val = read[i].trim();
-            switch (columnType.getPrimitiveCategory()) {
-              case BOOLEAN:
-                if (val.length() == 0)
+          try {
+            if (read != null && i < read.length) {
+              String val = read[i].trim();
+              switch (columnType.getPrimitiveCategory()) {
+                case BOOLEAN:
+                  if (val.length() == 0)
+                    row.set(i, null);
+                  else
+                    row.set(i, Boolean.valueOf(val));
+                  break;
+                case BYTE:
+                  if (val.length() == 0)
+                    row.set(i, null);
+                  else
+                    row.set(i, Byte.valueOf(val));
+                  break;
+                case DOUBLE:
+                  if (val.length() == 0)
+                    row.set(i, 0);
+                  else
+                    row.set(i, Double.valueOf(val));
+                  break;
+                case FLOAT:
+                  if (val.length() == 0)
+                    row.set(i, 0);
+                  else
+                    row.set(i, Float.valueOf(val));
+                  break;
+                case INT:
+                  if (val.length() == 0)
+                    row.set(i, 0);
+                  else
+                    row.set(i, Integer.valueOf(val));
+                  break;
+                case LONG:
+                  if (val.length() == 0)
+                    row.set(i, 0L);
+                  else
+                    row.set(i, Long.valueOf(val));
+                  break;
+                case SHORT:
+                  if (val.length() == 0)
+                    row.set(i, 0);
+                  else
+                    row.set(i, Short.valueOf(val));
+                  break;
+                case TIMESTAMP:
+                  if (val.length() == 0)
+                    row.set(i, null);
+                  else
+                    row.set(i, java.sql.Timestamp.valueOf(val));
+                  break;
+                case STRING:
+                  row.set(i, val);
+                  break;
+                case VOID:
                   row.set(i, null);
-                else
-                  row.set(i, Boolean.valueOf(val));
-                break;
-              case BYTE:
-                if (val.length() == 0)
-                  row.set(i, null);
-                else
-                  row.set(i, Byte.valueOf(val));
-                break;
-              case DOUBLE:
-                if (val.length() == 0)
-                  row.set(i, 0);
-                else
-                  row.set(i, Double.valueOf(val));
-                break;
-              case FLOAT:
-                if (val.length() == 0)
-                  row.set(i, 0);
-                else
-                  row.set(i, Float.valueOf(val));
-                break;
-              case INT:
-                if (val.length() == 0)
-                  row.set(i, 0);
-                else
-                  row.set(i, Integer.valueOf(val));
-                break;
-              case LONG:
-                if (val.length() == 0)
-                  row.set(i, 0);
-                else
-                  row.set(i, Long.valueOf(val));
-                break;
-              case SHORT:
-                if (val.length() == 0)
-                  row.set(i, 0);
-                else
-                  row.set(i, Short.valueOf(val));
-                break;
-              case TIMESTAMP:
-                if (val.length() == 0)
-                  row.set(i, null);
-                else
-                  row.set(i, java.sql.Timestamp.valueOf(val));
-                break;
-              case STRING:
-                row.set(i, val);
-                break;
-              case VOID:
-                row.set(i, null);
-                break;
-              case UNKNOWN:
-              default:
-                throw new RuntimeException("Unknown PrimitiveType");
+                  break;
+                case UNKNOWN:
+                default:
+                  throw new RuntimeException("Unknown PrimitiveType");
+              }
+            } else {
+              row.set(i, null);
             }
-          } else {
-            row.set(i, null);
+          } catch (final Exception e) {
+              row.set(i, null);
           }
         }
       }
